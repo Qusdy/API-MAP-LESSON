@@ -42,7 +42,7 @@ class Example(QWidget):
     def keyPressEvent(self, event):
         key = event.key()
         if key == Qt.Key_PageUp:
-            if self.delta > 0.001:
+            if self.delta > 0.01:
                 self.delta -= 0.01
         elif key == Qt.Key_PageDown:
             if self.delta <= 1:
