@@ -64,10 +64,10 @@ class Example(QWidget):
             else:
                 self.lat = f"{90 - (float(self.lat) - (self.stuf / self.delta) + 90):.{6}f}"
         elif key == Qt.Key_PageUp:
-            if self.delta > 0:
+            if self.delta - 1 > 0:
                 self.delta -= 1
         elif key == Qt.Key_PageDown:
-            if self.delta < 17:
+            if self.delta + 1 <= 17:
                 self.delta += 1
         self.get_map()
         self.image.setPixmap(QPixmap(self.map_file))
