@@ -1,6 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton
-from PyQt5.QtGui import QPixmap
+from PyQt5.Qt import *
 import requests
 import os
 
@@ -24,17 +23,7 @@ class Example(QWidget):
         self.image.move(0, 0)
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
-
-
         self.delta = 0.01
-        self.btn_up = QPushButton('PgUp', self)
-        self.btn_up.resize(50, 50)
-        self.btn_up.move(530, 30)
-        self.btn_down = QPushButton('PgDown', self)
-        self.btn_down.resize(50, 50)
-        self.btn_down.move(530, 110)
-        self.btn_up.clicked.connect(self.scale)
-        self.btn_down.clicked.connect(self.scale)
 
     def get_map(self, delta="0.01"):
         lon = "64.798335"
@@ -50,11 +39,12 @@ class Example(QWidget):
         with open(self.map_file, "wb") as file:
             file.write(response.content)
 
-    def scale(self):
-        if self.sender().text() == "PgUp":
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key == Qt.Key_PageUp:
             if self.delta > 0.001:
                 self.delta -= 0.01
-        else:
+        elif key == Qt.Key_PageDown:
             if self.delta <= 1:
                 self.delta += 0.01
         self.get_map(str(self.delta))
