@@ -12,7 +12,7 @@ SETTINGS = ("map", "sat", "sat,skl")
 class Example(QWidget):
     def __init__(self):
         super().__init__()
-        self.stuf = 2
+        self.stuf = 1
         self.delta = 1
         self.lon = "64.798335"
         self.lat = "54.468170"
@@ -46,6 +46,10 @@ class Example(QWidget):
         self.edit_map_btn = QPushButton("Редактировать", self)
         self.edit_map_btn.setStyleSheet("color: white; background-color: red")
         self.edit_map_btn.clicked.connect(self.edit)
+        self.clear_map_btn = QPushButton("Очистить", self)
+        self.clear_map_btn.setStyleSheet("color: white; background-color: red")
+        self.clear_map_btn.move(100, 0)
+        self.clear_map_btn.clicked.connect(self.clear)
         btn_map = QRadioButton("карта", self)
         btn_map.setChecked(True)
         btn_map.move(50, 10)
@@ -59,6 +63,18 @@ class Example(QWidget):
             el.resize(70, 70)
             el.toggled.connect(self.change_setings)
 
+    def clear(self):
+        self.delta = 1
+        self.lon = "64.798335"
+        self.lat = "54.468170"
+        self.params = {
+            "ll": ",".join([self.lon, self.lat]),
+            "z": self.delta,
+            "l": "map"
+        }
+        self.get_map()
+        self.image.setPixmap(QPixmap(self.map_file))
+
     def edit(self):
         if self.can_edit:
             self.can_edit = False
@@ -67,9 +83,9 @@ class Example(QWidget):
             self.search_zone.keyPressEvent = self.save
             self.edit_map_btn.setStyleSheet("color: white; background-color: red")
         else:
+            self.can_edit = True
             self.edit_map_btn.setStyleSheet("color: white; background-color: green")
             self.search_zone.keyPressEvent = self.keyPressEvent
-            self.can_edit = True
             for el in self.btns:
                 el.setEnabled(False)
 
