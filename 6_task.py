@@ -12,7 +12,7 @@ SETTINGS = ("map", "sat", "sat,skl")
 class Example(QWidget):
     def __init__(self):
         super().__init__()
-        self.stuf = 2
+        self.stuf = 1
         self.delta = 1
         self.lon = "64.798335"
         self.lat = "54.468170"
@@ -32,6 +32,7 @@ class Example(QWidget):
         self.image.move(0, 0)
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
+        self.can_edit = False
         self.search_ui()
 
     def search_ui(self):
@@ -42,6 +43,9 @@ class Example(QWidget):
         self.search_btn.move(400, 475)
         self.search_btn.resize(50, 20)
         self.search_btn.clicked.connect(self.search)
+        self.edit_map_btn = QPushButton("Редактировать", self)
+        self.edit_map_btn.setStyleSheet("color: white; background-color: red")
+        self.edit_map_btn.clicked.connect(self.edit)
         btn_map = QRadioButton("карта", self)
         btn_map.setChecked(True)
         btn_map.move(50, 10)
@@ -50,9 +54,24 @@ class Example(QWidget):
         btn_gibrid = QRadioButton("гибрид", self)
         btn_gibrid.move(190, 10)
         self.btns = [btn_map, btn_sat, btn_gibrid]
+        self.save = self.search_zone.keyPressEvent
         for el in self.btns:
             el.resize(70, 70)
             el.toggled.connect(self.change_setings)
+
+    def edit(self):
+        if self.can_edit:
+            self.can_edit = False
+            for el in self.btns:
+                el.setEnabled(True)
+            self.search_zone.keyPressEvent = self.save
+            self.edit_map_btn.setStyleSheet("color: white; background-color: red")
+        else:
+            self.can_edit = True
+            self.edit_map_btn.setStyleSheet("color: white; background-color: green")
+            self.search_zone.keyPressEvent = self.keyPressEvent
+            for el in self.btns:
+                el.setEnabled(False)
 
     def change_setings(self):
         for i in range(3):
@@ -70,16 +89,37 @@ class Example(QWidget):
 
     def keyPressEvent(self, event):
         key = event.key()
-        if key == Qt.Key_PageUp:
-            if self.delta - 1 > 0:
-                self.delta -= 1
-        elif key == Qt.Key_PageDown:
-            if self.delta + 1 <= 17:
-                self.delta += 1
-        self.params['ll'] = ",".join([self.lon, self.lat])
-        self.params["z"] = self.delta
-        self.get_map()
-        self.image.setPixmap(QPixmap(self.map_file))
+        if self.can_edit:
+            if key == Qt.Key_Right:
+                if float(self.lon) + (self.stuf / self.delta) <= 180:
+                    self.lon = f"{float(self.lon) + (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lon = f"{-180 + (float(self.lon) + (self.stuf / self.delta) - 180):.{6}f}"
+            elif key == Qt.Key_Left:
+                if float(self.lon) + (self.stuf / self.delta) >= -180:
+                    self.lon = f"{float(self.lon) - (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lon = f"{180 - (float(self.lon) - (self.stuf / self.delta) + 180):.{6}f}"
+            elif key == Qt.Key_Up:
+                if float(self.lat) + (self.stuf / self.delta) <= 90:
+                    self.lat = f"{float(self.lat) + (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lat = f"{-90 + (float(self.lat) + (self.stuf / self.delta) - 90):.{6}f}"
+            elif key == Qt.Key_Down:
+                if float(self.lat) + self.delta >= -90:
+                    self.lat = f"{float(self.lat) - (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lat = f"{90 - (float(self.lat) - (self.stuf / self.delta) + 90):.{6}f}"
+            elif key == Qt.Key_PageUp:
+                if self.delta - 1 > 0:
+                    self.delta -= 1
+            elif key == Qt.Key_PageDown:
+                if self.delta + 1 <= 17:
+                    self.delta += 1
+            self.params['ll'] = ",".join([self.lon, self.lat])
+            self.params["z"] = self.delta
+            self.get_map()
+            self.image.setPixmap(QPixmap(self.map_file))
 
     def search(self):
         self.search_zone.clearFocus()
@@ -117,6 +157,7 @@ def except_hook(cls, exception, traceback):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = Example()
-    ex.show()
+    form = Example()
+    form.show()
+    sys.excepthook = except_hook
     sys.exit(app.exec())
