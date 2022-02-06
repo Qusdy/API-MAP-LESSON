@@ -85,7 +85,7 @@ class Example(QWidget):
             self.adres.setText(toponym_address)
             self.adres.resize(self.adres.sizeHint())
             if self.adres_index.isChecked():
-                self.adres_index_lbl.setText(toponim_post)
+                self.adres_index_lbl.setText(self.toponim_post)
                 self.adres_index_lbl.resize(self.adres_index_lbl.sizeHint())
             response = requests.get(API_SERVER, params=params)
             self.map_file = "map.png"
