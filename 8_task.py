@@ -1,23 +1,30 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QLineEdit
-from PyQt5.QtGui import QPixmap
+from PyQt5.Qt import *
 import requests
 import os
 
 API_SERVER = "http://static-maps.yandex.ru/1.x/"
 API_KEY = "40d1649f-0493-4b70-98ba-98533de7710b"
-SCREEN_SIZE = [800, 500]
+SCREEN_SIZE = [600, 600]
+SETTINGS = ("map", "sat", "sat,skl")
 
 
 class Example(QWidget):
     def __init__(self):
         super().__init__()
-        self.delta = "0.02"
+        self.stuf = 1
+        self.delta = 1
+        self.lon = "64.798335"
+        self.lat = "54.468170"
+        self.params = {
+            "ll": ",".join([self.lon, self.lat]),
+            "z": self.delta,
+            "l": "map"
+        }
         self.get_map()
         self.initUI()
 
     def initUI(self):
-
         self.setGeometry(100, 100, *SCREEN_SIZE)
         self.setWindowTitle('Отображение карты')
         self.pixmap = QPixmap(self.map_file)
@@ -26,36 +33,117 @@ class Example(QWidget):
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
         self.adres = QLabel(self)
-        self.adres.move(750, 100)
+        self.adres.move(10, 500)
 
+
+        self.can_edit = False
         self.search_ui()
-
-    def get_map(self):
-        lon = "64.798335"
-        lat = "54.468170"
-        delta = "0.01"
-
-        params = {
-            "ll": ",".join([lon, lat]),
-            "spn": ",".join([delta, delta]),
-            "l": "map"
-        }
-        response = requests.get(API_SERVER, params=params)
-        self.map_file = "map.png"
-        with open(self.map_file, "wb") as file:
-            file.write(response.content)
 
     def search_ui(self):
         self.search_zone = QLineEdit(self)
         self.search_zone.move(10, 475)
         self.search_zone.resize(300, 20)
-
         self.search_btn = QPushButton("Искать", self)
         self.search_btn.move(400, 475)
         self.search_btn.resize(50, 20)
         self.search_btn.clicked.connect(self.search)
+        self.edit_map_btn = QPushButton("Редактировать", self)
+        self.edit_map_btn.setStyleSheet("color: white; background-color: red")
+        self.edit_map_btn.clicked.connect(self.edit)
+        self.clear_map_btn = QPushButton("Очистить", self)
+        self.clear_map_btn.setStyleSheet("color: white; background-color: red")
+        self.clear_map_btn.move(100, 0)
+        self.clear_map_btn.clicked.connect(self.clear)
+        btn_map = QRadioButton("карта", self)
+        btn_map.setChecked(True)
+        btn_map.move(50, 10)
+        btn_sat = QRadioButton("спутник", self)
+        btn_sat.move(120, 10)
+        btn_gibrid = QRadioButton("гибрид", self)
+        btn_gibrid.move(190, 10)
+        self.btns = [btn_map, btn_sat, btn_gibrid]
+        self.save = self.search_zone.keyPressEvent
+        for el in self.btns:
+            el.resize(70, 70)
+            el.toggled.connect(self.change_setings)
+
+    def clear(self):
+        self.delta = 1
+        self.lon = "64.798335"
+        self.lat = "54.468170"
+        self.params = {
+            "ll": ",".join([self.lon, self.lat]),
+            "z": self.delta,
+            "l": "map"
+        }
+        self.get_map()
+        self.image.setPixmap(QPixmap(self.map_file))
+        self.adres.setText("")
+
+    def edit(self):
+        if self.can_edit:
+            self.can_edit = False
+            for el in self.btns:
+                el.setEnabled(True)
+            self.search_zone.keyPressEvent = self.save
+            self.edit_map_btn.setStyleSheet("color: white; background-color: red")
+        else:
+            self.can_edit = True
+            self.edit_map_btn.setStyleSheet("color: white; background-color: green")
+            self.search_zone.keyPressEvent = self.keyPressEvent
+            for el in self.btns:
+                el.setEnabled(False)
+
+    def change_setings(self):
+        for i in range(3):
+            if self.btns[i] == self.sender():
+                self.params["l"] = SETTINGS[i]
+                self.get_map()
+                break
+        self.image.setPixmap(QPixmap(self.map_file))
+
+    def get_map(self):
+        response = requests.get(API_SERVER, params=self.params)
+        self.map_file = "map.png"
+        with open(self.map_file, "wb") as file:
+            file.write(response.content)
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if self.can_edit:
+            if key == Qt.Key_Right:
+                if float(self.lon) + (self.stuf / self.delta) <= 180:
+                    self.lon = f"{float(self.lon) + (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lon = f"{-180 + (float(self.lon) + (self.stuf / self.delta) - 180):.{6}f}"
+            elif key == Qt.Key_Left:
+                if float(self.lon) + (self.stuf / self.delta) >= -180:
+                    self.lon = f"{float(self.lon) - (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lon = f"{180 - (float(self.lon) - (self.stuf / self.delta) + 180):.{6}f}"
+            elif key == Qt.Key_Up:
+                if float(self.lat) + (self.stuf / self.delta) <= 90:
+                    self.lat = f"{float(self.lat) + (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lat = f"{-90 + (float(self.lat) + (self.stuf / self.delta) - 90):.{6}f}"
+            elif key == Qt.Key_Down:
+                if float(self.lat) + self.delta >= -90:
+                    self.lat = f"{float(self.lat) - (self.stuf / self.delta):.{6}f}"
+                else:
+                    self.lat = f"{90 - (float(self.lat) - (self.stuf / self.delta) + 90):.{6}f}"
+            elif key == Qt.Key_PageUp:
+                if self.delta - 1 > 0:
+                    self.delta -= 1
+            elif key == Qt.Key_PageDown:
+                if self.delta + 1 <= 17:
+                    self.delta += 1
+            self.params['ll'] = ",".join([self.lon, self.lat])
+            self.params["z"] = self.delta
+            self.get_map()
+            self.image.setPixmap(QPixmap(self.map_file))
 
     def search(self):
+        self.search_zone.clearFocus()
         que = self.search_zone.text()
         geocoder_request = f"http://geocode-maps.yandex.ru/1.x/?apikey={API_KEY}&geocode={que}&format=json"
         response = requests.get(geocoder_request)
@@ -65,28 +153,30 @@ class Example(QWidget):
             toponym_address = toponym["metaDataProperty"]["GeocoderMetaData"]["text"]
             toponym_coodrinates = toponym["Point"]["pos"]
 
-            lon, lat = toponym_coodrinates.split()
-            params = {
-                "pt": ",".join([lon, lat]),
-                "l": "map"
-            }
-
-            self.adres.setText(toponym_address)
+            self.adres.setText("Адрес: " + toponym_address)
             self.adres.resize(self.adres.sizeHint())
-            response = requests.get(API_SERVER, params=params)
-            print(response)
+
+
+            lon, lat = toponym_coodrinates.split()
+            self.params["pt"] = ",".join([lon, lat])
+            self.params["ll"] = ",".join([lon, lat])
+            self.lon = lon
+            self.lat = lat
+
+            pararam = dict()
+            pararam["pt"] = self.params["pt"]
+            pararam["l"] = self.params["l"]
+
+            response = requests.get(API_SERVER, params=pararam)
             self.map_file = "map.png"
             with open(self.map_file, "wb") as file:
                 file.write(response.content)
             self.pixmap = QPixmap(self.map_file)
             self.image.setPixmap(self.pixmap)
-
         else:
             print("Ошибка выполнения запроса:")
             print(geocoder_request)
             print("Http статус:", response.status_code, "(", response.reason, ")")
-
-
 
     def closeEvent(self, event):
         os.remove(self.map_file)
